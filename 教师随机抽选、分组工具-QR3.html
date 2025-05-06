@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <title>智慧课堂管理平台</title>
+  <style>
+    :root {
+      --bg-color: #e8f5e9;
+      --text-color: #2e7d32;
+    }
+
+    body {
+      background-color: var(--bg-color);
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, sans-serif;
+      color: var(--text-color);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      padding: 40px 20px;
+    }
+
+    header {
+      font-size: 36px;
+      font-weight: bold;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    .main-container {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 40px;
+      justify-content: center;
+      align-items: flex-start;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .input-area, .blackboard {
+      background: white;
+      border-radius: 10px;
+      padding: 20px;
+      box-shadow: 0 3px 8px rgba(0,0,0,0.1);
+      text-align: center;
+      max-width: 400px;
+    }
+
+    textarea {
+      height: 150px;
+      width: 100%;
+      padding: 10px;
+      font-size: 16px;
+      border: 2px solid #81c784;
+      border-radius: 8px;
+      resize: vertical;
+    }
+
+    .config-section {
+      background: #f0fff0;
+      padding: 12px;
+      border-radius: 6px;
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    }
+
+    .group-list, .group-box {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      justify-content: center;
+      margin-top: 20px;
+    }
+
+    .group-title {
+      font-weight: bold;
+      text-align: center;
+      line-height: 28px;
+      color: #2e7d32;
+    }
+
+    .member-item {
+      display: inline-block;
+      background: #c8e6c9;
+      color: #2e7d32;
+      padding: 6px 12px;
+      border-radius: 4px;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    #qrcode-output, #groups-display {
+      margin-top: 30px;
+      min-width: 100%;
+    }
+
+    button {
+      padding: 10px;
+      border-radius: 6px;
+      background: #81c784;
+      border: none;
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    button:hover {
+      background: #66bb6a;
+    }
+  </style>
+</head>
+<body>
+
+  <header>智慧课堂管理平台</header>
+
+  <div class="main-container">
+
+    <!-- 左侧输入模块 -->
+    <div class="input-area">
+      <label>请输入姓名（每行一个）</label>
+      <textarea id="name-list" placeholder="例如：张三&#10;李四"></textarea>
+
+      <div class="config-section">
+        <input type="file" id="file-upload" accept=".txt" hidden>
+        <button onclick="document.getElementById('file-upload').click()">上传TXT名单</button>
+      </div>
+
+      <div class="config-section">
+        <button onclick="randomGroup()">随机分组</button>
+        <button onclick="exportGroupsToExcel()">导出分组结果（Excel）</button>
+      </div>
+
+      <!-- QRCode模块 -->
+      <div class="config-section qrcode-section">
+        <h3>二维码生成器</h3>
+        <button onclick="shareGroupsQRCode()">生成分组分享二维码</button>
+        <div id="qrcode-output"></div>
+      </div>
+    </div>
+
+    <!-- 右侧显示模块 -->
+    <div class="blackboard">
+      <h3 id="name-display">准备就绪</h3>
+      <div id="groups-display"></div>
+    </div>
+
+  </div>
+
+  <!-- 引入依赖 -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+
+  <script>
+
+    let teachers = [];
+
+    const nameList = document.getElementById('name-list');
+    const fileInput = document.getElementById('file-upload');
+    const groupsDisplay = document.getElementById('groups-display');
+
+    // HTMPL 模板
+    function templateGroupCard(groupName, members) {
+      return `<div class="group-box">
+                <div class="group-title">${groupName}</div>
+                ${members.map(m => `<span class="member-item">${m}</span>`).join('')}
+              </div>`
+    }
+
+    nameList.addEventListener('input', updateTeachers);
+    fileInput.addEventListener('change', handleFileUpload);
+
+    function updateTeachers(content) {
+      teachers = content.split('\n').map(n => n.trim()).filter(n => n);
+    }
+
+    function handleFileUpload(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function (ev) {
+        const result = ev.target.result;
+        nameList.value = result;
+        updateTeachers(result);
+      };
+      reader.readAsText(file);
+    }
+
+    function randomGroup() {
+      if (teachers.length === 0) {
+        alert("请先输入姓名列表或上传文件");
+        return;
+      }
+      const count = 3;
+      const shuffled = [...teachers].sort(() => Math.random() - 0.5);
+      let html = '';
+      for (let i = 0; i < count; i++) {
+        const members = shuffled.filter((_, index) => index % count === i);
+        html += templateGroupCard(`第 ${i + 1} 组`, members);
+      }
+      groupsDisplay.innerHTML = html;
+    }
+
+    // ✅ Excel 导出功能
+    function exportGroupsToExcel() {
+      const groups = document.querySelectorAll('.group-box');
+      if (groups.length === 0) {
+        alert('请先进行分组，再点击导出按钮');
+        return;
+      }
+
+      const workbook = XLSX.utils.book_new();
+
+      groups.forEach(group => {
+        const name = group.querySelector('.group-title').textContent;
+        const names = [...group.querySelectorAll('.member-item')].map(el => el.textContent.trim());
+
+        const wsArr = [[name], ['姓名']];
+        names.forEach(n => wsArr.push([n]));
+
+        const worksheet = XLSX.utils.aoa_to_sheet(wsArr);
+        let sheetName = name.substring(0, 31);
+        let i = 1;
+
+        while (workbook.SheetNames.includes(sheetName)) {
+          sheetName = name + '_' + i++;
+        }
+
+        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
+      });
+
+      XLSX.writeFile(workbook, '课堂分组结果.xlsx');
+      alert('已完成分组 Excel 文件导出，请注意浏览器下载提示');
+    }
+
+    // ✅ 分组分享二维码生成（含分组数据）
+    function shareGroupsQRCode() {
+      const groups = document.querySelectorAll('.group-box');
+      if (groups.length === 0) {
+        alert('请先进行分组，再生成二维码');
+        return;
+      }
+
+      const data = Array.from(groups).map(group => {
+        return {
+          name: group.querySelector('.group-title').textContent,
+          members: [...group.querySelectorAll('.member-item')].map(m => m.textContent.trim())
+        };
+      });
+
+      const encoded = encodeURIComponent(JSON.stringify(data));
+      const url = `${location.href.split('#')[0]}#groups:${encoded}`;
+      document.getElementById("qrcode-output").innerHTML = '';
+      QRCode.toCanvas(url, { width: 200 }, function (err, canvas) {
+        if (err) {
+          alert('生成二维码时出错：' + err.message);
+          return;
+        }
+        document.getElementById('qrcode-output').appendChild(canvas);
+      });
+    }
+
+    // 📱 **如果从二维码打开页面，可直接显示分组信息**
+    window.addEventListener('load', () => {
+      const hash = location.hash;
+      if (hash && hash.startsWith('#groups:')) {
+        const dataStr = decodeURIComponent(hash.slice(8));
+        try {
+          const data = JSON.parse(dataStr);
+          let html = data.map(g => templateGroupCard(g.name, g.members)).join('');
+          groupsDisplay.innerHTML = html;
+        } catch (e) {
+          alert("无效的分组二维码");
+        }
+      }
+    });
+
+  </script>
+
+</body>
+</html>
