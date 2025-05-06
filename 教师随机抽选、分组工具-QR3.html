@@ -1,7 +1,8 @@
+//5.6日增加二维码生成，分组结果导出功能
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
-  <meta charset="UTF-8">
+  <meta charset="UTF-8" />
   <title>智慧课堂管理平台</title>
   <style>
     :root {
@@ -18,14 +19,15 @@
       display: flex;
       flex-direction: column;
       align-items: center;
+      justify-content: center;
       padding: 40px 20px;
     }
 
     header {
       font-size: 36px;
       font-weight: bold;
-      text-align: center;
       margin-bottom: 30px;
+      text-align: center;
     }
 
     .main-container {
@@ -34,248 +36,393 @@
       gap: 40px;
       justify-content: center;
       align-items: flex-start;
-      max-width: 1200px;
       width: 100%;
+      max-width: 1200px;
     }
 
-    .input-area, .blackboard {
+    .input-area {
+      width: 300px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
       background: white;
       border-radius: 10px;
       padding: 20px;
       box-shadow: 0 3px 8px rgba(0,0,0,0.1);
-      text-align: center;
-      max-width: 400px;
     }
 
     textarea {
-      height: 150px;
-      width: 100%;
+      height: 200px;
       padding: 10px;
-      font-size: 16px;
       border: 2px solid #81c784;
-      border-radius: 8px;
-      resize: vertical;
+      border-radius: 6px;
+      resize: none;
+    }
+
+    input[type="text"],
+    input[type="file"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 8px;
+      margin: 5px 0;
+      border-radius: 6px;
+      border: 1px solid #ccc;
     }
 
     .config-section {
-      background: #f0fff0;
-      padding: 12px;
-      border-radius: 6px;
-      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+      background: #fff;
+      padding: 15px;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.05);
     }
 
-    .group-list, .group-box {
+    .blackboard {
+      flex: 1;
+      min-width: 300px;
+      max-width: 600px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+    }
+
+    #name-display {
+      font-size: 48px;
+      font-weight: bold;
+      margin: 20px 0;
+      min-height: 60px;
+      transition: all 0.3s ease;
+    }
+
+    #groups-display {
       display: flex;
       flex-wrap: wrap;
-      gap: 14px;
+      gap: 20px;
       justify-content: center;
-      margin-top: 20px;
+      margin: 20px 0 40px;
+    }
+
+    .group-box {
+      min-width: 120px;
+      flex: 1 1 220px;
+      max-width: 280px;
+      min-height: 150px;
+      display: flex;
+      flex-direction: column;
+      background: #f5fff5;
+      border: 1px dashed #66bb6a;
+      border-radius: 8px;
+      padding: 10px;
+      transition: all 0.3s ease;
+    }
+
+    .group-box:hover {
+      border-color: #2e7d32;
     }
 
     .group-title {
       font-weight: bold;
+      color: var(--text-color);
+      margin-bottom: 10px;
       text-align: center;
-      line-height: 28px;
-      color: #2e7d32;
     }
 
-    .member-item {
+    .draggable {
       display: inline-block;
-      background: #c8e6c9;
-      color: #2e7d32;
       padding: 6px 12px;
-      border-radius: 4px;
+      background: #a5d6a7;
+      border-radius: 5px;
+      margin: 3px 0;
+      cursor: grab;
+    }
+
+    .draggable.dragging {
+      opacity: 0.7;
+      transform: scale(0.98);
+    }
+
+    .qrcode-section {
+      clear: both;
+      margin-top: 30px;
+    }
+
+    #url-input {
+      width: 100%;
+      margin: 10px 0;
+      padding: 8px;
+      box-sizing: border-box;
+    }
+
+    #qrcode-output {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    #qrcode-output canvas {
+      display: inline-block;
     }
 
     .hidden {
       display: none;
     }
-
-    #qrcode-output, #groups-display {
-      margin-top: 30px;
-      min-width: 100%;
-    }
-
-    button {
-      padding: 10px;
-      border-radius: 6px;
-      background: #81c784;
-      border: none;
-      color: white;
-      cursor: pointer;
-      font-weight: bold;
-    }
-
-    button:hover {
-      background: #66bb6a;
-    }
   </style>
 </head>
 <body>
 
+  <!-- 页面标题 -->
   <header>智慧课堂管理平台</header>
 
+  <!-- 主体内容 -->
   <div class="main-container">
-
-    <!-- 左侧输入模块 -->
+    <!-- 左侧输入区域 -->
     <div class="input-area">
-      <label>请输入姓名（每行一个）</label>
-      <textarea id="name-list" placeholder="例如：张三&#10;李四"></textarea>
-
+      <textarea id="name-list" placeholder="请粘贴名单（每行一个姓名），或上传文件"></textarea>
       <div class="config-section">
-        <input type="file" id="file-upload" accept=".txt" hidden>
-        <button onclick="document.getElementById('file-upload').click()">上传TXT名单</button>
+        <input type="file" id="file-upload" accept=".txt">
+        <button onclick="document.getElementById('file-upload').click()">上传TXT文件</button>
       </div>
 
       <div class="config-section">
-        <button onclick="randomGroup()">随机分组</button>
-        <button onclick="exportGroupsToExcel()">导出分组结果（Excel）</button>
+        <label>姓名字体大小：</label>
+        <input type="range" id="font-size" min="12" max="72" value="48">
+        <output id="font-size-value">48</output>px
       </div>
 
-      <!-- QRCode模块 -->
+      <!-- ✅ 新增：随机抽选按钮 -->
+      <div class="config-section">
+        <button onclick="selectTeacher()">随机抽选</button>
+      </div>
+
+      <div class="config-section">
+        <input type="number" id="group-count" min="1" value="3" style="width: 60px;">
+        <button onclick="createGroups()">随机分组</button>
+      </div>
+
+     <div class="config-section">
+     <button onclick="exportGroupsToExcel()">导出分组结果到Excel</button>
+     </div>
+
       <div class="config-section qrcode-section">
         <h3>二维码生成器</h3>
-        <button onclick="shareGroupsQRCode()">生成分组分享二维码</button>
-        <div id="qrcode-output"></div>
+        <input type="text" id="url-input" placeholder="https://example.com" />
+        <button onclick="generateQRCode()">生成二维码</button>
+        <div id="qrcode-output" class="hidden"></div>
       </div>
     </div>
 
-    <!-- 右侧显示模块 -->
+    <!-- 右侧显示区域 -->
     <div class="blackboard">
-      <h3 id="name-display">准备就绪</h3>
+      <div id="name-display">准备就绪</div>
       <div id="groups-display"></div>
     </div>
-
   </div>
 
-  <!-- 引入依赖 -->
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/qrcode"></script>
+  <!-- 设置区域 -->
+  <div style="clear:both; padding: 20px; margin-top: 40px;">
+    <label>背景色：<input type="color" id="bg-color" value="#e8f5e9"></label>
+    <label>文字色：<input type="color" id="text-color" value="#2e7d32"></label>
+  </div>
 
+  <!-- 引入 qrcode.js -->
+  <script src="https://cdn.jsdelivr.net/npm/qrcode/build/qrcode.min.js"></script>
   <script>
-
+    // 初始化数据
     let teachers = [];
+    let draggedElement = null;
 
+    // DOM 元素
     const nameList = document.getElementById('name-list');
-    const fileInput = document.getElementById('file-upload');
-    const groupsDisplay = document.getElementById('groups-display');
+    const nameDisplay = document.getElementById('name-display');
+    const urlInput = document.getElementById('url-input');
+    const qrcodeOutput = document.getElementById('qrcode-output');
 
-    // HTMPL 模板
-    function templateGroupCard(groupName, members) {
-      return `<div class="group-box">
-                <div class="group-title">${groupName}</div>
-                ${members.map(m => `<span class="member-item">${m}</span>`).join('')}
-              </div>`
-    }
+    // ✅ 更新名单
+    nameList.addEventListener('input', function () {
+      updateTeachers(this.value);
+    });
 
-    nameList.addEventListener('input', updateTeachers);
-    fileInput.addEventListener('change', handleFileUpload);
-
-    function updateTeachers(content) {
-      teachers = content.split('\n').map(n => n.trim()).filter(n => n);
-    }
-
-    function handleFileUpload(e) {
+    // 文件上传
+    document.getElementById('file-upload').addEventListener('change', function (e) {
       const file = e.target.files[0];
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = function (ev) {
-        const result = ev.target.result;
-        nameList.value = result;
-        updateTeachers(result);
-      };
-      reader.readAsText(file);
-    }
-
-    function randomGroup() {
-      if (teachers.length === 0) {
-        alert("请先输入姓名列表或上传文件");
-        return;
-      }
-      const count = 3;
-      const shuffled = [...teachers].sort(() => Math.random() - 0.5);
-      let html = '';
-      for (let i = 0; i < count; i++) {
-        const members = shuffled.filter((_, index) => index % count === i);
-        html += templateGroupCard(`第 ${i + 1} 组`, members);
-      }
-      groupsDisplay.innerHTML = html;
-    }
-
-    // ✅ Excel 导出功能
-    function exportGroupsToExcel() {
-      const groups = document.querySelectorAll('.group-box');
-      if (groups.length === 0) {
-        alert('请先进行分组，再点击导出按钮');
-        return;
-      }
-
-      const workbook = XLSX.utils.book_new();
-
-      groups.forEach(group => {
-        const name = group.querySelector('.group-title').textContent;
-        const names = [...group.querySelectorAll('.member-item')].map(el => el.textContent.trim());
-
-        const wsArr = [[name], ['姓名']];
-        names.forEach(n => wsArr.push([n]));
-
-        const worksheet = XLSX.utils.aoa_to_sheet(wsArr);
-        let sheetName = name.substring(0, 31);
-        let i = 1;
-
-        while (workbook.SheetNames.includes(sheetName)) {
-          sheetName = name + '_' + i++;
-        }
-
-        XLSX.utils.book_append_sheet(workbook, worksheet, sheetName);
-      });
-
-      XLSX.writeFile(workbook, '课堂分组结果.xlsx');
-      alert('已完成分组 Excel 文件导出，请注意浏览器下载提示');
-    }
-
-    // ✅ 分组分享二维码生成（含分组数据）
-    function shareGroupsQRCode() {
-      const groups = document.querySelectorAll('.group-box');
-      if (groups.length === 0) {
-        alert('请先进行分组，再生成二维码');
-        return;
-      }
-
-      const data = Array.from(groups).map(group => {
-        return {
-          name: group.querySelector('.group-title').textContent,
-          members: [...group.querySelectorAll('.member-item')].map(m => m.textContent.trim())
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function () {
+          updateTeachers(this.result);
+          nameList.value = this.result;
         };
-      });
-
-      const encoded = encodeURIComponent(JSON.stringify(data));
-      const url = `${location.href.split('#')[0]}#groups:${encoded}`;
-      document.getElementById("qrcode-output").innerHTML = '';
-      QRCode.toCanvas(url, { width: 200 }, function (err, canvas) {
-        if (err) {
-          alert('生成二维码时出错：' + err.message);
-          return;
-        }
-        document.getElementById('qrcode-output').appendChild(canvas);
-      });
-    }
-
-    // 📱 **如果从二维码打开页面，可直接显示分组信息**
-    window.addEventListener('load', () => {
-      const hash = location.hash;
-      if (hash && hash.startsWith('#groups:')) {
-        const dataStr = decodeURIComponent(hash.slice(8));
-        try {
-          const data = JSON.parse(dataStr);
-          let html = data.map(g => templateGroupCard(g.name, g.members)).join('');
-          groupsDisplay.innerHTML = html;
-        } catch (e) {
-          alert("无效的分组二维码");
-        }
+        reader.readAsText(file);
       }
     });
 
+    function updateTeachers(content) {
+      teachers = content
+        .split('\n')
+        .map(item => item.trim())
+        .filter(name => name);
+    }
+
+    // ✅ 设置姓名字体大小
+    const fontSizeSlider = document.getElementById('font-size');
+    const fontSizeValue = document.getElementById('font-size-value');
+    fontSizeSlider.addEventListener('input', function (e) {
+      const size = e.target.value;
+      fontSizeValue.textContent = size;
+      nameDisplay.style.fontSize = size + 'px';
+    });
+
+    // ✅ 随机抽选
+    function selectTeacher() {
+      if (teachers.length === 0) {
+        alert('请先输入名单或上传TXT文件！');
+        return;
+      }
+      const randomIndex = Math.floor(Math.random() * teachers.length);
+      nameDisplay.textContent = teachers[randomIndex];
+    }
+
+    // ✅ 随机组功能
+    function createGroups() {
+      const groupCount = parseInt(document.getElementById('group-count').value);
+      if (groupCount < 1) {
+        alert('分组数量必须大于等于1！');
+        return;
+      }
+
+      if (teachers.length === 0) {
+        alert('请先上传数据');
+        return;
+      }
+
+      const shuffled = [...teachers].sort(() => Math.random() - 0.5);
+      const groupContainer = document.getElementById('groups-display');
+      groupContainer.innerHTML = '';
+
+      for (let i = 0; i < groupCount; i++) {
+        const groupMembers = shuffled.filter((_, index) => index % groupCount === i);
+        const group = createGroupBox(`第 ${i + 1} 组`, groupMembers);
+        setupDrag(group);
+        groupContainer.appendChild(group);
+      }
+    }
+
+    function createGroupBox(name, members) {
+      const box = document.createElement('div');
+      box.className = 'group-box';
+      box.setAttribute('data-group-name', name);
+
+      const title = document.createElement('div');
+      title.className = 'group-title';
+      title.textContent = name;
+
+      box.appendChild(title);
+
+      members.forEach(name => {
+        const item = createDraggableName(name);
+        box.appendChild(item);
+      });
+
+      return box;
+    }
+
+    function createDraggableName(name) {
+      const item = document.createElement('div');
+      item.className = 'draggable';
+      item.textContent = name;
+
+      item.addEventListener('dragstart', (e) => {
+        draggedElement = e.target;
+        e.dataTransfer.setData('text/plain', e.target.textContent);
+      });
+
+      return item;
+    }
+
+    function setupDrag(groupBox) {
+      groupBox.addEventListener('dragover', function (e) {
+        e.preventDefault();
+        this.classList.add('drag-over');
+      });
+
+      groupBox.addEventListener('dragleave', function () {
+        this.classList.remove('drag-over');
+      });
+
+      groupBox.addEventListener('drop', function (e) {
+        e.preventDefault();
+        this.classList.remove('drag-over');
+
+        if (draggedElement && draggedElement !== this) {
+          this.appendChild(draggedElement);
+          draggedElement = null;
+        }
+      });
+    }
+function exportGroupsToExcel() {
+  const groups = document.querySelectorAll('.group-box');
+  if (groups.length === 0) {
+    alert('没有可供导出的分组结果！');
+    return;
+  }
+
+  let csvData = "分组名,姓名\n";
+  groups.forEach(group => {
+    const groupName = group.querySelector('.group-title')?.textContent || '未命名组';
+    const names = group.querySelectorAll('.draggable');
+    names.forEach(nameElem => {
+      csvData += `"${groupName}","${nameElem.textContent.trim()}"\n`;
+    });
+  });
+
+  const blob = new Blob(['\uFEFF', csvData], { type: 'text/csv;charset=utf-8;' });
+  const link = document.createElement("a");
+  link.href = URL.createObjectURL(blob);
+  link.download = "分组结果.csv";
+  link.click();
+  URL.revokeObjectURL(link.href);
+}
+    // ✅ 生成二维码
+    function generateQRCode() {
+      const content = urlInput.value.trim();
+
+      if (!content) {
+        alert('请输入网址或文本内容');
+        return;
+      }
+
+      qrcodeOutput.innerHTML = '<canvas id="qrcode-canvas"></canvas>';
+      qrcodeOutput.classList.remove('hidden');
+
+      QRCode.toCanvas(
+        document.getElementById('qrcode-canvas'),
+        content,
+        {
+          width: 240,
+          height: 240,
+          color: {
+            dark: getComputedStyle(document.documentElement)
+              .getPropertyValue('--text-color')
+              .trim(),
+            light: "#ffffff"
+          }
+        },
+        function (error) {
+          if (error) {
+            alert('生成二维码出错：' + error.message);
+          }
+        }
+      );
+    }
+
+    // ✅ 颜色选项
+    document.getElementById('bg-color').addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--bg-color', e.target.value);
+    });
+
+    document.getElementById('text-color').addEventListener('input', (e) => {
+      document.documentElement.style.setProperty('--text-color', e.target.value);
+    });
   </script>
 
 </body>
