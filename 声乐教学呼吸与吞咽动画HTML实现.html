@@ -1,0 +1,253 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <style>
+        .container {
+            width: 1000px;
+            height: 700px;
+            position: relative;
+            background: #f8f8f8;
+        }
+
+        .organ {
+            position: absolute;
+            transition: all 0.5s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+        }
+
+        /* 肺部样式 */
+        #lungs {
+            width: 280px;
+            height: 400px;
+            background: 
+                linear-gradient(175deg, 
+                    rgba(20, 120, 200, 0.15) 20%,
+                    rgba(0, 150, 255, 0.3) 60%);
+            border-radius: 140px;
+            left: 360px;
+            top: 150px;
+            box-shadow: inset 0 0 15px rgba(0,0,0,0.1);
+        }
+
+        /* 横膈膜样式 */
+        #diaphragm {
+            width: 500px;
+            height: 40px;
+            background: 
+                repeating-linear-gradient(-45deg,
+                    #666 0px, #666 15px,
+                    #888 15px, #888 30px);
+            top: 500px;
+            left: 250px;
+            border-radius: 20px;
+            transform: translateY(0);
+        }
+
+        /* 气管样式 */
+        #trachea {
+            width: 60px;
+            height: 180px;
+            background: 
+                repeating-linear-gradient(90deg,
+                    #77aaff 0px, #77aaff 5px,
+                    #6688cc 5px, #6688cc 10px);
+            left: 470px;
+            top: 80px;
+            border-radius: 8px;
+        }
+
+        /* 食道样式 */
+        #esophagus {
+            width: 35px;
+            height: 220px;
+            background: 
+                radial-gradient(circle at 50% 0%, 
+                    #ff9999 20%, 
+                    #ff6666 80%);
+            left: 510px;
+            top: 160px;
+            opacity: 0.5;
+            border-radius: 15px;
+        }
+
+        /* 会厌软骨样式 */
+        #epiglottis {
+            width: 50px;
+            height: 25px;
+            background: 
+                linear-gradient(45deg, #ffff99 30%, #ffeb3b 70%);
+            left: 475px;
+            top: 240px;
+            transform-origin: top center;
+            border-radius: 5px 5px 15px 15px;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.2);
+        }
+
+        /* 标注样式 */
+        .label {
+            position: absolute;
+            font-family: Arial, sans-serif;
+            font-size: 14px;
+            color: #333;
+            padding: 5px 10px;
+            background: rgba(255,255,255,0.9);
+            border-radius: 3px;
+            pointer-events: none;
+            box-shadow: 2px 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* 动画细节 */
+        .active-path {
+            filter: drop-shadow(0 0 5px rgba(255,50,50,0.5));
+            opacity: 1 !important;
+        }
+
+        .dimmed {
+            opacity: 0.3 !important;
+        }
+
+        .buttons {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+        }
+
+        button {
+            margin: 5px;
+            padding: 10px 20px;
+            background: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background 0.3s;
+        }
+
+        button:hover {
+            background: #45a049;
+        }
+
+        /* 呼吸动画 */
+        @keyframes breathing {
+            0% { transform: scaleY(1) translateY(0); }
+            50% { transform: scaleY(1.15) translateY(-10px); }
+            100% { transform: scaleY(1) translateY(0); }
+        }
+
+        @keyframes diaphragmMove {
+            0% { transform: translateY(0); }
+            50% { transform: translateY(25px); }
+            100% { transform: translateY(0); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 器官 -->
+        <div id="lungs" class="organ">
+            <div class="label" style="left: 120px; top: 180px;">肺部</div>
+        </div>
+        <div id="diaphragm" class="organ">
+            <div class="label" style="left: 200px; top: -20px;">横膈膜</div>
+        </div>
+        <div id="trachea" class="organ">
+            <div class="label" style="left: -40px; top: 80px;">气管</div>
+        </div>
+        <div id="esophagus" class="organ">
+            <div class="label" style="left: 10px; top: 100px;">食道</div>
+        </div>
+        <div id="epiglottis" class="organ">
+            <div class="label" style="left: -30px; top: 30px;">会厌软骨</div>
+        </div>
+        
+        <!-- 附加细节 -->
+        <div class="vocal-cords" style="..."></div>
+    </div>
+
+    <div class="buttons">
+        <button onclick="showBreathing()">呼吸模式</button>
+        <button onclick="swallow()">吞咽动作</button>
+        <button onclick="phonation()">发音状态</button>
+    </div>
+
+    <script>
+        // 初始化呼吸动画
+        let breathingInterval;
+
+        function reset() {
+            clearInterval(breathingInterval);
+            document.querySelectorAll('.organ').forEach(el => {
+                el.classList.remove('active-path', 'dimmed');
+                el.style.transform = '';
+                el.style.animation = '';
+            });
+        }
+
+        function showBreathing() {
+            reset();
+            // 肺部动画
+            const lungs = document.getElementById('lungs');
+            const diaphragm = document.getElementById('diaphragm');
+            lungs.style.animation = 'breathing 3s ease-in-out infinite';
+            diaphragm.style.animation = 'diaphragmMove 3s ease-in-out infinite';
+            
+            // 标注强调
+            document.querySelectorAll('#lungs, #diaphragm').forEach(el => {
+                el.classList.add('active-path');
+            });
+            document.querySelectorAll('#trachea, #esophagus').forEach(el => {
+                el.classList.add('dimmed');
+            });
+        }
+
+        function swallow() {
+            reset();
+            // 会厌软骨关闭气管
+            const epiglottis = document.getElementById('epiglottis');
+            epiglottis.style.transform = 'rotate(60deg)';
+            
+            // 状态变化
+            document.getElementById('esophagus').classList.add('active-path');
+            document.getElementById('trachea').classList.add('dimmed');
+            document.getElementById('epiglottis').classList.add('active-path');
+            
+            // 食道蠕动动画
+            const esophagus = document.getElementById('esophagus');
+            esophagus.style.animation = 'peristalsis 2s infinite';
+        }
+
+        function phonation() {
+            reset();
+            // 会厌软骨打开气管
+            const epiglottis = document.getElementById('epiglottis');
+            epiglottis.style.transform = 'rotate(-30deg)';
+            
+            // 状态变化
+            document.getElementById('trachea').classList.add('active-path');
+            document.getElementById('esophagus').classList.add('dimmed');
+            document.getElementById('epiglottis').classList.add('active-path');
+            
+            // 声带振动效果
+            const trachea = document.getElementById('trachea');
+            trachea.style.animation = 'vibrate 0.1s linear infinite';
+        }
+
+        // 新增动画定义
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes peristalsis {
+                0% { transform: scaleY(1); }
+                50% { transform: scaleY(1.2); }
+                100% { transform: scaleY(1); }
+            }
+            
+            @keyframes vibrate {
+                0% { transform: translateX(0); }
+                50% { transform: translateX(2px); }
+                100% { transform: translateX(0); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
