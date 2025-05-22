@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<title>新视野大学英语 - 单词配对练习</title>
+<style>
+    body { font-family: Arial, sans-serif; }
+    .container { width: 70%; margin: auto; padding: 20px; border: 1px solid #ccc; text-align: center; }
+    .card-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin-top: 20px; }
+    .card { 
+        width: 100px; 
+        height: 100px; 
+        background-color: #f0f0f0; 
+        border: 1px solid #ccc; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        cursor: pointer; 
+        user-select: none; 
+        position: relative; 
+        transition: transform 0.3s;
+        font-weight: bold;
+    }
+    .card.flipped { transform: rotateY(180deg); }
+    .card.matched { opacity: 0; pointer-events: none; }
+    .card .front, .card .back { 
+        position: absolute; 
+        width: 100%; 
+        height: 100%; 
+        backface-visibility: hidden; 
+        display: flex; 
+        align-items: center; 
+        justify-content: center; 
+        font-size: 16px; 
+    }
+    .card .front { 
+        background-color: #fff; 
+    }
+    .card .back { 
+        background-color: #f0f0f0; 
+        transform: rotateY(180deg); 
+    }
+    .feedback { margin-top: 20px; }
+    .correct { color: green; }
+    .incorrect { color: red; }
+</style>
+</head>
+<body>
+<div class="container">
+    <h1>单词配对练习</h1>
+    <p>请将英文单词与对应的中文意思进行配对。</p>
+    
+    <!-- 卡片网格 -->
+    <div class="card-grid" id="cardGrid"></div>
+    
+    <!-- 反馈区域 -->
+    <div id="feedback" class="feedback"></div>
+</div>
+
+<script>
+const words = [
+    { en: "ambition", zh: "雄心" },
+    { en: "attitude", zh: "态度" },
+    { en: "consequence", zh: "后果" },
+    { en: "determine", zh: "决定" },
+    { en: "impact", zh: "影响" }
+];
+
+// 创建卡片数组
+const cards = [];
+words.forEach(word => {
+    // 英文卡片
+    cards.push({ type: 'en', value: word.en, flipped: false, matched: false });
+    // 中文卡片
+    cards.push({ type: 'zh', value: word.zh, flipped: false, matched: false });
+});
+
+// 打乱卡片顺序
+function shuffle(array) {
+    for (let i = array.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [array[i], array[j]] = [array[j], array[i]];
+    }
+}
+shuffle(cards);
+
+// 创建卡片网格
+const cardGrid = document.getElementById('cardGrid');
+cards.forEach((card, index) => {
+    const cardElement = document.createElement('div');
+    cardElement.classList.add('card');
+    cardElement.dataset.index = index;
+
+    const frontElement = document.createElement('div');
+    frontElement.classList.add('front');
+    frontElement.textContent = card.value;
+
+    const backElement = document.createElement('div');
+    backElement.classList.add('back');
+    backElement.textContent = card.value;
+
+    cardElement.appendChild(frontElement);
+    cardElement.appendChild(backElement);
+    cardGrid.appendChild(cardElement);
+});
+
+let firstCard, secondCard;
+
+// 添加点击事件
+cardGrid.addEventListener('click', event => {
+    const card = event.target.closest('.card');
+    if (!card || card.classList.contains('flipped') || card.classList.contains('matched')) return;
+
+    card.classList.add('flipped');
+
+    if (!firstCard) {
+        firstCard = card;
+    } else {
+        secondCard = card;
+        checkMatch();
+    }
+});
+
+// 检查配对
+function checkMatch() {
+    const firstIndex = parseInt(firstCard.dataset.index);
+    const secondIndex = parseInt(secondCard.dataset.index);
+
+    if ((cards[firstIndex].type === 'en' && cards[secondIndex].type === 'zh' && cards[firstIndex].value === words.find(w => w.zh === cards[secondIndex].value).en) ||
+        (cards[firstIndex].type === 'zh' && cards[secondIndex].type === 'en' && cards[secondIndex].value === words.find(w => w.zh === cards[firstIndex].value).en)) {
+        firstCard.classList.add('matched');
+        secondCard.classList.add('matched');
+        firstCard = null;
+        secondCard = null;
+        checkWin();
+    } else {
+        setTimeout(() => {
+            firstCard.classList.remove('flipped');
+            secondCard.classList.remove('flipped');
+            firstCard = null;
+            secondCard = null;
+        }, 1000);
+    }
+}
+
+// 检查是否全部配对完成
+function checkWin() {
+    const allMatched = [...document.querySelectorAll('.card')].every(card => card.classList.contains('matched'));
+    if (allMatched) {
+        alert("恭喜！您所有的配对都正确！");
+    }
+}
+</script>
+</body>
+</html>
